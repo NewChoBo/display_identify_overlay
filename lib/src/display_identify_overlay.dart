@@ -25,6 +25,10 @@ class DisplayIdentifyOverlay {
   /// - [OverlayCreationException] if overlay creation fails
   static Future<void> show([OverlayOptions? options]) async {
     try {
+      // If platform unsupported, do nothing to keep API safe on all targets
+      if (!PlatformDetector.isSupported) {
+        return;
+      }
       // Detect monitors
       final monitors = await _monitorDetector.getMonitors();
 
@@ -47,6 +51,7 @@ class DisplayIdentifyOverlay {
 
   /// Hides all currently displayed overlays.
   static Future<void> hide() async {
+  if (!PlatformDetector.isSupported) return;
     await _overlayManager.hideAllOverlays();
   }
 
@@ -57,7 +62,7 @@ class DisplayIdentifyOverlay {
   /// Throws:
   /// - [UnsupportedPlatformException] if the current platform is not supported
   static Future<List<MonitorInfo>> getMonitors() async =>
-      _monitorDetector.getMonitors();
+  PlatformDetector.isSupported ? _monitorDetector.getMonitors() : <MonitorInfo>[];
 
   /// Checks if the current platform is supported.
   ///

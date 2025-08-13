@@ -11,8 +11,8 @@ abstract class OverlayManager {
     if (PlatformDetector.isWindows) {
       return OverlayManagerWindows();
     }
-    // TODO: Add Linux and macOS implementations
-    throw UnsupportedPlatformException(PlatformDetector.platform);
+    // Graceful no-op manager for unsupported platforms
+    return _NoopOverlayManager();
   }
 
   /// Shows overlays on all specified monitors.
@@ -26,4 +26,12 @@ abstract class OverlayManager {
 
   /// Hides all currently displayed overlays.
   Future<void> hideAllOverlays();
+}
+
+class _NoopOverlayManager implements OverlayManager {
+  @override
+  Future<void> hideAllOverlays() async {}
+
+  @override
+  Future<void> showOverlays(List<MonitorInfo> monitors, OverlayOptions options) async {}
 }

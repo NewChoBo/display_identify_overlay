@@ -24,7 +24,7 @@ This project aims to provide a lightweight Flutter package that displays tempora
 
 ## Status
 
-- Early work in progress; API and implementation details are being defined.
+- Windows overlay implemented; Linux/macOS planned. APIs are stable and safe no‑op on unsupported platforms.
 
 ## Features
 
@@ -33,9 +33,9 @@ This project aims to provide a lightweight Flutter package that displays tempora
 - [x] Monitor information model
 - [x] Overlay styling and positioning options
 - [x] Exception handling
-- [ ] Windows implementation
-- [ ] Linux implementation
-- [ ] macOS implementation
+- [x] Windows implementation (Win32 overlay)
+- [ ] Linux implementation (planned)
+- [ ] macOS implementation (planned)
 - [ ] Tests
 - [ ] Documentation
 
@@ -60,7 +60,7 @@ dependencies:
 ```dart
 import 'package:display_identify_overlay/display_identify_overlay.dart';
 
-// Basic usage
+// Basic usage (no-op on unsupported platforms like macOS/Linux for now)
 await DisplayIdentifyOverlay.show();
 
 // With custom options
@@ -79,7 +79,7 @@ await DisplayIdentifyOverlay.show(
 // Hide overlays manually
 await DisplayIdentifyOverlay.hide();
 
-// Get monitor information
+// Get monitor information (returns [] on unsupported platforms)
 final monitors = await DisplayIdentifyOverlay.getMonitors();
 ```
 
@@ -137,9 +137,21 @@ Information about a monitor.
 
 ## Platform Support
 
-- [x] Windows (planned)
-- [ ] Linux (planned)
-- [ ] macOS (planned)
+- Windows: Implemented
+- Linux: Planned (current behavior is safe no‑op)
+- macOS: Planned (current behavior is safe no‑op)
+
+## Publishing (pub.dev)
+
+1. Ensure `pubspec.yaml` has name, description, version, homepage/repository, and a valid `LICENSE` file at the repo root.
+
+2. Validate locally:
+
+- `dart format .`
+- `flutter analyze`
+- `dart pub publish --dry-run`
+
+1. Publish: `dart pub publish`
 
 ## Contributing
 

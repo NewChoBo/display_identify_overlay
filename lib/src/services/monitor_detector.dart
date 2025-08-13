@@ -10,8 +10,8 @@ abstract class MonitorDetector {
     if (PlatformDetector.isWindows) {
       return MonitorDetectorWindows();
     }
-    // TODO: Add Linux and macOS implementations
-    throw UnsupportedPlatformException(PlatformDetector.platform);
+    // Graceful no-op detector for unsupported platforms
+    return _NoopMonitorDetector();
   }
 
   /// Gets information about all connected monitors.
@@ -21,4 +21,9 @@ abstract class MonitorDetector {
   /// Throws:
   /// - [UnsupportedPlatformException] if the current platform is not supported
   Future<List<MonitorInfo>> getMonitors();
+}
+
+class _NoopMonitorDetector implements MonitorDetector {
+  @override
+  Future<List<MonitorInfo>> getMonitors() async => <MonitorInfo>[];
 }
