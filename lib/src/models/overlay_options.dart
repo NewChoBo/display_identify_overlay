@@ -4,7 +4,7 @@ import 'package:display_identify_overlay/src/models/overlay_style.dart';
 class OverlayOptions {
   /// Creates an [OverlayOptions] with the given parameters.
   const OverlayOptions({
-    this.duration,
+    this.duration = const Duration(seconds: 3),
     this.style = const OverlayStyle(),
     this.position = OverlayPosition.center,
     this.autoHide = true,

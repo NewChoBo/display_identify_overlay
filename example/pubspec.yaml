@@ -1,0 +1,21 @@
+name: display_identify_overlay_example
+publish_to: "none"
+description: Minimal example to test display_identify_overlay on Windows.
+version: 0.0.1
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  display_identify_overlay:
+    path: ..
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets: []

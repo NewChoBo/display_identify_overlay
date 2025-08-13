@@ -108,7 +108,7 @@ void main() {
     test('should create overlay options with default values', () {
       const options = OverlayOptions();
 
-      expect(options.duration, isNull);
+      expect(options.duration, equals(const Duration(seconds: 3)));
       expect(options.style, isA<OverlayStyle>());
       expect(options.position, equals(OverlayPosition.center));
       expect(options.autoHide, isTrue);

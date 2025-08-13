@@ -1,0 +1,29 @@
+### Flutter example app ignores (Windows focus)
+
+# OS & editor
+.DS_Store
+*.swp
+*.log
+.idea/
+*.iml
+.vscode/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+
+# Generated docs
+**/doc/api/
+
+# Flutter Windows
+windows/flutter/ephemeral/
+
+# Caches
+.pub-cache/
+.pub/
+
+# Optional
+.history
