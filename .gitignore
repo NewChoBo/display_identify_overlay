@@ -29,3 +29,67 @@ migrate_working_dir/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+# Windows OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Visual Studio / MSBuild outputs
+.vs/
+[Bb]in/
+[Oo]bj/
+[Dd]ebug*/
+[Rr]elease*/
+[Ii]ntermediate/
+*.pdb
+*.ipdb
+*.iobj
+*.idb
+*.ilk
+*.obj
+*.tlog/
+*.lastbuildstate
+
+# CMake build artifacts
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Flutter Windows generated files
+windows/flutter/ephemeral/
+example/windows/flutter/ephemeral/
+
+# Flutter macOS & Linux generated files
+macos/Flutter/ephemeral/
+example/macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+example/linux/flutter/ephemeral/
+
+# Xcode (macOS) user data
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xcscmblueprint
+**/*.pbxuser
+*.dSYM/
+
+# GCC/Clang artifacts (Linux/macOS)
+*.o
+*.a
+*.so
+*.dylib
+*.d
+*.pch
+
+# CMake (IDE-specific builds)
+cmake-build-*/
+CMakeUserPresets.json
+CMakeSettings.json
