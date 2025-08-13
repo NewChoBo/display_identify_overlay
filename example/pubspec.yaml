@@ -1,0 +1,22 @@
+name: example
+description: Example app for display_identify_overlay package.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: "^3.8.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  display_identify_overlay:
+    path: ../
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

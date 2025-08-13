@@ -1,0 +1,37 @@
+{
+    "dart.lineLength": 80,
+    "editor.rulers": [80],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    },
+    "dart.previewFlutterUiGuides": true,
+    "dart.previewFlutterUiGuidesCustomTracking": true,
+    "dart.enableSdkFormatter": true,
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "Dart-Code.dart-code"
+    },
+    "files.associations": {
+        "*.yaml": "yaml",
+        "*.yml": "yaml"
+    },
+    "files.exclude": {
+        "**/.dart_tool": true,
+        "**/.packages": true,
+        "**/build": true,
+        "**/.flutter-plugins": true,
+        "**/.flutter-plugins-dependencies": true,
+        "**/pubspec.lock": false
+    },
+    "files.watcherExclude": {
+        "**/.dart_tool/**": true,
+        "**/build/**": true,
+        "**/.flutter-plugins": true,
+        "**/.flutter-plugins-dependencies": true
+    },
+    "search.exclude": {
+        "**/build": true,
+        "**/.dart_tool": true
+    }
+}

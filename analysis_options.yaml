@@ -1,0 +1,17 @@
+include: package:flutter_lints/flutter.yaml
+
+# Additional rules for this project
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated_plugin_registrant.dart"
+  
+linter:
+  rules:
+    # Enforce good Dart style
+    prefer_single_quotes: true
+    avoid_print: false  # Allow print statements for debugging
+    avoid_unnecessary_containers: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
