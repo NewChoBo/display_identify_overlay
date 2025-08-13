@@ -33,5 +33,8 @@ class _NoopOverlayManager implements OverlayManager {
   Future<void> hideAllOverlays() async {}
 
   @override
-  Future<void> showOverlays(List<MonitorInfo> monitors, OverlayOptions options) async {}
+  Future<void> showOverlays(
+    List<MonitorInfo> monitors,
+    OverlayOptions options,
+  ) async {}
 }

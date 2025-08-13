@@ -20,7 +20,7 @@ class NoMonitorsDetectedException extends DisplayIdentifyException {
 class UnsupportedPlatformException extends DisplayIdentifyException {
   /// Creates an [UnsupportedPlatformException] for the given [platform].
   const UnsupportedPlatformException(String platform)
-      : super('Platform $platform is not supported');
+    : super('Platform $platform is not supported');
 }
 
 /// Exception thrown when overlay creation fails.
