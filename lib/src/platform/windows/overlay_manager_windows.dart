@@ -4,8 +4,8 @@ import 'dart:ffi';
 import 'package:display_identify_overlay/src/models/monitor_info.dart';
 import 'package:display_identify_overlay/src/models/overlay_options.dart';
 import 'package:display_identify_overlay/src/services/overlay_manager.dart';
-import 'package:win32/win32.dart' as win;
 import 'package:ffi/ffi.dart';
+import 'package:win32/win32.dart' as win;
 
 /// Windows implementation of [OverlayManager].
 class OverlayManagerWindows implements OverlayManager {
@@ -54,11 +54,11 @@ class _WindowsOverlay {
 
   final List<int> _hwnds = <int>[];
 
-  // Window class and proc
   late final Pointer<NativeFunction<win.WNDPROC>> _wndProcPtr =
       Pointer.fromFunction<win.WNDPROC>(_wndProc, 0);
 
   static const _className = 'DIO_OverlayWindowClass';
+  static bool _classRegistered = false;
 
   void initialize() {
     _registerWindowClass();
@@ -68,8 +68,7 @@ class _WindowsOverlay {
   }
 
   void destroyAll() {
-    for (final hwnd in _hwnds) {
-      // Destroy synchronously to ensure windows are removed immediately
+  for (final hwnd in _hwnds) {
       if (hwnd != 0) {
         win.DestroyWindow(hwnd);
       }
@@ -78,6 +77,7 @@ class _WindowsOverlay {
   }
 
   void _registerWindowClass() {
+    if (_classRegistered) return;
     final hInstance = win.GetModuleHandle(nullptr);
     final wc = calloc<win.WNDCLASSEX>();
 
@@ -85,7 +85,8 @@ class _WindowsOverlay {
     wc.ref.style = win.CS_HREDRAW | win.CS_VREDRAW;
     wc.ref.lpfnWndProc = _wndProcPtr;
     wc.ref.cbClsExtra = 0;
-    wc.ref.cbWndExtra = sizeOf<IntPtr>(); // store index in GWLP_USERDATA
+    // No need to reserve extra window bytes for GWLP_USERDATA
+    wc.ref.cbWndExtra = 0;
     wc.ref.hInstance = hInstance;
     wc.ref.hIcon = win.LoadIcon(hInstance, win.IDI_APPLICATION);
     wc.ref.hCursor = win.LoadCursor(0, win.IDC_ARROW);
@@ -100,6 +101,8 @@ class _WindowsOverlay {
     calloc.free(className);
     calloc.free(wc);
 
+    // Consider already-registered as success for our use-case
+    _classRegistered = true;
     if (atom == 0) {
       // If class already exists, it's fine.
     }
@@ -142,21 +145,8 @@ class _WindowsOverlay {
     const opacity = 180; // 0-255
     win.SetLayeredWindowAttributes(hwnd, 0, opacity, win.LWA_ALPHA);
 
-    // Make it click-through and non-activating
-    final exStyle = win.GetWindowLongPtr(hwnd, win.GWL_EXSTYLE);
-    win.SetWindowLongPtr(
-      hwnd,
-      win.GWL_EXSTYLE,
-      exStyle |
-          win.WS_EX_NOACTIVATE |
-          win.WS_EX_TRANSPARENT |
-          win.WS_EX_TOPMOST |
-          win.WS_EX_LAYERED |
-          win.WS_EX_TOOLWINDOW,
-    );
-    // Show without activating
+    // Show without activating (styles were already applied in CreateWindowEx)
     win.ShowWindow(hwnd, win.SW_SHOWNOACTIVATE);
-    win.UpdateWindow(hwnd);
 
     calloc.free(className);
     calloc.free(windowName);
@@ -169,6 +159,9 @@ class _WindowsOverlay {
       case win.WM_PAINT:
         _paint(hwnd);
         return 0;
+      case win.WM_ERASEBKGND:
+        // We paint the full background; prevent flicker
+        return 1;
       case win.WM_KEYDOWN:
       case win.WM_LBUTTONDOWN:
       case win.WM_RBUTTONDOWN:
@@ -180,6 +173,14 @@ class _WindowsOverlay {
         win.DestroyWindow(hwnd);
         return 0;
       case win.WM_DESTROY:
+        // Cleanup any window properties (e.g., cached font)
+        final propName = win.TEXT('DIO_HFONT');
+        final hFont = win.GetProp(hwnd, propName);
+        if (hFont != 0) {
+          win.RemoveProp(hwnd, propName);
+          win.DeleteObject(hFont);
+        }
+        calloc.free(propName);
         return 0;
     }
     return win.DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -192,10 +193,9 @@ class _WindowsOverlay {
       final rect = calloc<win.RECT>();
       win.GetClientRect(hwnd, rect);
 
-      // Fill background (semi-transparent due to layered window alpha)
-      final brush = win.CreateSolidBrush(0x000000); // black
+      // Fill background using stock brush (no allocation/delete)
+      final brush = win.GetStockObject(win.BLACK_BRUSH);
       win.FillRect(hdc, rect, brush);
-      win.DeleteObject(brush);
 
       // Prepare text
       final index = win.GetWindowLongPtr(hwnd, win.GWLP_USERDATA);
@@ -204,37 +204,36 @@ class _WindowsOverlay {
       // Font size relative to window height
       final height = rect.ref.bottom - rect.ref.top;
       final fontSize = (height * 0.25).clamp(24, 4000).toInt();
-      // Try to create a bold font of the desired height
-      final lf = calloc<win.LOGFONT>();
-      lf.ref.lfHeight = -fontSize; // negative -> character height
-      lf.ref.lfWeight = 700; // FW_BOLD
-      final hFont = win.CreateFontIndirect(lf);
+      // Reuse a per-window cached font if available
+      final propName = win.TEXT('DIO_HFONT');
+      var hFont = win.GetProp(hwnd, propName);
+      if (hFont == 0) {
+        final lf = calloc<win.LOGFONT>();
+        lf.ref.lfHeight = -fontSize; // negative -> character height
+        lf.ref.lfWeight = 700; // FW_BOLD
+        hFont = win.CreateFontIndirect(lf);
+        win.SetProp(hwnd, propName, hFont);
+        calloc.free(lf);
+      }
       final oldFont = win.SelectObject(hdc, hFont);
 
       win.SetBkMode(hdc, win.TRANSPARENT);
       win.SetTextColor(hdc, 0x00FFFFFF); // white
 
-      final dtRect = calloc<win.RECT>();
-      dtRect.ref.left = rect.ref.left;
-      dtRect.ref.top = rect.ref.top;
-      dtRect.ref.right = rect.ref.right;
-      dtRect.ref.bottom = rect.ref.bottom;
-
       win.DrawText(
         hdc,
         text,
         -1,
-        dtRect,
+        rect,
         win.DT_CENTER | win.DT_VCENTER | win.DT_SINGLELINE,
       );
 
       // Cleanup
       win.SelectObject(hdc, oldFont);
-      win.DeleteObject(hFont);
-      calloc.free(lf);
+      // hFont is cached as a window property; deleted on WM_DESTROY
+      calloc.free(propName);
       calloc.free(text);
       calloc.free(rect);
-      calloc.free(dtRect);
     } finally {
       win.EndPaint(hwnd, ps);
       calloc.free(ps);

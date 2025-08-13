@@ -39,7 +39,7 @@ jobs:
         run: flutter analyze
 
       - name: Run tests
-        run: dart test -r expanded
+        run: flutter test -r expanded
 
       - name: Verify tag matches pubspec.yaml version
         id: version_check
@@ -48,6 +48,8 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME}"
           TAG_VERSION="${TAG_NAME#v}"
           FILE_VERSION=$(awk '/^version:/{print $2}' pubspec.yaml)
+          # Strip build suffix like +1 (compare only x.y.z)
+          FILE_VERSION=${FILE_VERSION%%+*}
           echo "Tag: ${TAG_VERSION}  Pubspec: ${FILE_VERSION}"
           if [ "${TAG_VERSION}" != "${FILE_VERSION}" ]; then
             echo "::error::Tag ${TAG_VERSION} does not match pubspec.yaml version ${FILE_VERSION}"
