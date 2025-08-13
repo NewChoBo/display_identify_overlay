@@ -11,29 +11,24 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+# display_identify_overlay
 
-## Features
+Project goal
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+This project aims to provide a lightweight Flutter package that displays temporary, on‑screen identifiers on each connected display (similar to the "Identify displays" feature in OS display settings) for desktop environments.
 
-## Getting started
+Why
+- Quickly help users and developers identify which physical monitor corresponds to which logical display.
+- Useful in multi‑monitor setups during onboarding, configuration, demos, or troubleshooting.
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Scope
+- Show large, clearly visible numbered labels on all connected displays.
+- Basic customization for appearance (color, opacity, font size) and display duration.
+- Desktop focus with Windows first; macOS and Linux to follow.
 
-## Usage
+Non‑goals
+- Managing display settings (resolution, scaling, arrangement) is out of scope.
+- Persistent overlays or window management features are not included.
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+Status
+- Early work in progress; API and implementation details will be defined next.
