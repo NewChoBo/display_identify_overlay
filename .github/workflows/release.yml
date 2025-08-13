@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish and create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format check
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: dart test -r expanded
+
+      - name: Verify tag matches pubspec.yaml version
+        id: version_check
+        shell: bash
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          TAG_VERSION="${TAG_NAME#v}"
+          FILE_VERSION=$(awk '/^version:/{print $2}' pubspec.yaml)
+          echo "Tag: ${TAG_VERSION}  Pubspec: ${FILE_VERSION}"
+          if [ "${TAG_VERSION}" != "${FILE_VERSION}" ]; then
+            echo "::error::Tag ${TAG_VERSION} does not match pubspec.yaml version ${FILE_VERSION}"
+            exit 1
+          fi
+          echo "version=${FILE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Publish to pub.dev
+        if: ${{ secrets.PUB_CREDENTIALS_JSON }}
+        uses: k-paxian/dart-package-publisher@v1.6.6
+        with:
+          credentialJson: ${{ secrets.PUB_CREDENTIALS_JSON }}
+          flutter: true
+          skipTests: true
+
+      - name: Skip publish (missing credentials)
+        if: ${{ !secrets.PUB_CREDENTIALS_JSON }}
+        run: |
+          echo "PUB_CREDENTIALS_JSON secret not set. Skipping publish to pub.dev."
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

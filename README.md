@@ -1,6 +1,9 @@
 # display_identify_overlay
 
-A Flutter package that displays monitor index numbers as overlays on all connected displays. Perfect for identifying monitors in multi-display setups.
+A Flutter package that displays monitor index numbers as overlays on all connected displays. Perfect for identifying monitors in multi‑display setups.
+
+[![CI](https://github.com/NewChoBo/display_identify_overlay/actions/workflows/ci.yml/badge.svg)](https://github.com/NewChoBo/display_identify_overlay/actions/workflows/ci.yml)
+[![pub.dev](https://img.shields.io/pub/v/display_identify_overlay.svg)](https://pub.dev/packages/display_identify_overlay)
 
 ## Project Goal
 
@@ -24,7 +27,7 @@ This project aims to provide a lightweight Flutter package that displays tempora
 
 ## Status
 
-- Windows overlay implemented; Linux/macOS planned. APIs are stable and safe no‑op on unsupported platforms.
+- Windows overlay implemented (click‑through, non‑activating, auto‑hide). Linux/macOS planned. APIs are stable and safe no‑op on unsupported platforms.
 
 ## Features
 
@@ -36,8 +39,10 @@ This project aims to provide a lightweight Flutter package that displays tempora
 - [x] Windows implementation (Win32 overlay)
 - [ ] Linux implementation (planned)
 - [ ] macOS implementation (planned)
-- [ ] Tests
-- [ ] Documentation
+- [x] Tests (unit)
+- [x] Documentation
+- [x] CI (analyze + tests)
+- [x] Tag‑based release automation
 
 ## Getting Started
 
@@ -59,6 +64,7 @@ dependencies:
 
 ```dart
 import 'package:display_identify_overlay/display_identify_overlay.dart';
+import 'package:flutter/material.dart';
 
 // Basic usage (no-op on unsupported platforms like macOS/Linux for now)
 await DisplayIdentifyOverlay.show();
@@ -141,7 +147,37 @@ Information about a monitor.
 - Linux: Planned (current behavior is safe no‑op)
 - macOS: Planned (current behavior is safe no‑op)
 
-## Publishing (pub.dev)
+## Release & Publishing
+
+Publishing to pub.dev is automated on version tags that match `pubspec.yaml`.
+
+1. Configure pub.dev credentials once (GitHub secret):
+
+- On your machine, run `dart pub login` and complete OAuth.
+- Copy the contents of your pub credentials JSON (on Windows: `%APPDATA%\dart\pub-credentials.json`).
+- In GitHub → Settings → Secrets and variables → Actions, add a new secret:
+  - Name: `PUB_CREDENTIALS_JSON`
+  - Value: paste the JSON content
+
+1. Cut a release:
+
+- Bump `version:` in `pubspec.yaml` (e.g., `0.1.1`) and commit.
+- Create and push a matching tag with a `v` prefix:
+
+```powershell
+git add pubspec.yaml; git commit -m "chore: release 0.1.1"
+git tag -a v0.1.1 -m "Release 0.1.1"
+git push origin v0.1.1
+```
+
+The workflow will:
+
+- Run format/analyze/tests
+- Verify the tag matches `pubspec.yaml` version
+- Publish to pub.dev (if `PUB_CREDENTIALS_JSON` is set)
+- Create a GitHub Release with notes
+
+Manual publish (fallback):
 
 1. Ensure `pubspec.yaml` has name, description, version, homepage/repository, and a valid `LICENSE` file at the repo root.
 

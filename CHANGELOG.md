@@ -7,31 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Initial project structure and API design
-- Platform detection and abstraction layer
-- Monitor information model (`MonitorInfo`)
-- Overlay styling and positioning options (`OverlayStyle`, `OverlayOptions`)
-- Exception handling system
-- Basic Windows platform implementation structure
-- Comprehensive documentation and README
-
+ 
 ### Planned
-- Complete Windows implementation with native API calls
+
 - Linux platform support
 - macOS platform support
-- Unit and integration tests
-- Example applications
+- Multi‑monitor enumeration improvements on Windows
+- Example application enhancements
 
-## [0.1.0] - 2025-01-XX
+## [0.1.0] - 2025-08-14
 
+ 
 ### Added
-- Initial release with basic project structure
-- Core API design for monitor identification overlays
-- Platform abstraction for cross-platform support
-- Comprehensive documentation
 
+- Initial release
+- Core API design for monitor identification overlays
+- Platform abstraction for cross‑platform support
+- Windows implementation (topmost, click‑through, non‑activating, auto‑hide)
+- Safe no‑op behavior on unsupported platforms
+- Unit tests and documentation
+- CI workflow (format, analyze, flutter test)
+- Tag‑based release workflow (verify tag vs. pubspec version, publish to pub.dev, create GitHub Release)
+
+ 
 ### Technical Details
+
 - Flutter SDK requirement: >=3.16.0
 - Dart SDK requirement: >=3.8.1
-- Supports Windows, Linux, and macOS (planned)
+- Platforms: Windows implemented; Linux and macOS planned
