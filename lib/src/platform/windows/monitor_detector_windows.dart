@@ -13,7 +13,7 @@ class MonitorDetectorWindows implements MonitorDetector {
   Future<List<MonitorInfo>> getMonitors() async {
     final monitors = <MonitorInfo>[];
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; ; i++) {
       final dd = calloc<win.DISPLAY_DEVICE>();
       dd.ref.cb = sizeOf<win.DISPLAY_DEVICE>();
       final ok = win.EnumDisplayDevices(nullptr, i, dd, 0);

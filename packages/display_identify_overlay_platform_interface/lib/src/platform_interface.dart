@@ -1,4 +1,4 @@
-import 'models.dart';
+import 'package:display_identify_overlay_platform_interface/src/models.dart';
 
 abstract class DisplayIdentifyOverlayPlatform {
   static DisplayIdentifyOverlayPlatform? _instance;

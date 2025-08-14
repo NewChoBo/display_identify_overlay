@@ -20,7 +20,7 @@ abstract class OverlayManager {
   /// [options] - Configuration options for the overlays.
   ///
   /// Throws:
-  /// - [OverlayCreationException] if overlay creation fails
+  /// - OverlayCreationException if overlay creation fails
   Future<void> showOverlays(List<MonitorInfo> monitors, OverlayOptions options);
 
   /// Hides all currently displayed overlays.

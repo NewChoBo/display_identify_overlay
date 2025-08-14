@@ -14,7 +14,7 @@ import 'package:display_identify_overlay_platform_interface/display_identify_ove
 class DisplayIdentifyOverlay {
   DisplayIdentifyOverlay._();
 
-  static final MonitorDetector _monitorDetector = MonitorDetector();
+  static final MonitorDetector _monitorDetector = createMonitorDetector();
   static final OverlayManager _overlayManager = OverlayManager();
 
   static bool get _hasPlugin =>

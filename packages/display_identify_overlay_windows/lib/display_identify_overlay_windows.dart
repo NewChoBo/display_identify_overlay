@@ -1,5 +1,3 @@
-library display_identify_overlay_windows;
-
 import 'dart:async';
 import 'dart:ffi';
 
@@ -18,6 +16,10 @@ class DisplayIdentifyOverlayWindows
 
   _WindowsOverlay? _overlay;
   Timer? _autoHideTimer;
+  void _onAutoHide() {
+    // ignore: discarded_futures
+    hideAllOverlays();
+  }
 
   @override
   String get platformName => 'Windows';
@@ -110,9 +112,7 @@ class DisplayIdentifyOverlayWindows
 
     _autoHideTimer?.cancel();
     if (options.autoHide && options.duration != null) {
-      _autoHideTimer = Timer(options.duration!, () {
-        hideAllOverlays();
-      });
+      _autoHideTimer = Timer(options.duration!, _onAutoHide);
     }
   }
 
