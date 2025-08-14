@@ -1,0 +1,16 @@
+name: display_identify_overlay_platform_interface
+version: 0.1.0
+publish_to: none
+description: Platform interface for display_identify_overlay.
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.11.0
+
+dev_dependencies:
+  flutter_lints: ^5.0.0

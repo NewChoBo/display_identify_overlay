@@ -1,5 +1,4 @@
 import 'package:display_identify_overlay/src/core/platform_detector.dart';
-import 'package:display_identify_overlay/src/exceptions/display_identify_exception.dart';
 import 'package:display_identify_overlay/src/models/monitor_info.dart';
 import 'package:display_identify_overlay/src/platform/windows/monitor_detector_windows.dart';
 
