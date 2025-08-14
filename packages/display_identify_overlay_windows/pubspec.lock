@@ -20,9 +20,10 @@ packages:
   display_identify_overlay_platform_interface:
     dependency: "direct main"
     description:
-      path: "../display_identify_overlay_platform_interface"
-      relative: true
-    source: path
+      name: display_identify_overlay_platform_interface
+      sha256: e505b56b728d7eee27c00d21715278b4e2ed8719b18833e19b0ea4acfb435f9a
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
   ffi:
     dependency: "direct main"
