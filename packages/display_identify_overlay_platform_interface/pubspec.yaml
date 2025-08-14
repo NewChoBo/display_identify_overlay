@@ -1,7 +1,8 @@
 name: display_identify_overlay_platform_interface
 version: 0.1.0
-publish_to: none
 description: Platform interface for display_identify_overlay.
+homepage: https://github.com/NewChoBo/display_identify_overlay
+repository: https://github.com/NewChoBo/display_identify_overlay
 
 environment:
   sdk: ^3.8.1
