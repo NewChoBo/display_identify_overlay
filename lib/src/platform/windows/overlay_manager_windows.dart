@@ -86,7 +86,7 @@ class _WindowsOverlay {
   }
 
   void _registerWindowClass() {
-  if (_classRegistered) return;
+    if (_classRegistered) return;
     final hInstance = win.GetModuleHandle(nullptr);
     final wc = calloc<win.WNDCLASSEX>();
 
@@ -113,7 +113,7 @@ class _WindowsOverlay {
     if (atom == 0) {
       // If class already exists, it's fine.
     }
-  _classRegistered = true;
+    _classRegistered = true;
   }
 
   void _createOverlayForMonitor(MonitorInfo m) {
@@ -350,8 +350,8 @@ class _WindowsOverlay {
 
       // Cleanup
       win.SelectObject(hdc, oldFont);
-  calloc.free(lf);
-  calloc.free(hFontProp);
+      calloc.free(lf);
+      calloc.free(hFontProp);
       calloc.free(text);
       calloc.free(rect);
       calloc.free(dtRect);
