@@ -56,8 +56,24 @@ jobs:
           fi
           echo "version=${FILE_VERSION}" >> $GITHUB_OUTPUT
 
+      - name: Check publish eligibility
+        id: publish_check
+        shell: bash
+        run: |
+          if grep -qE '^publish_to:\s*none' pubspec.yaml; then
+            echo "can_publish=false" >> $GITHUB_OUTPUT
+            echo "Found publish_to: none. Skipping publish."
+            exit 0
+          fi
+          if grep -qE '^\s{2,}[a-zA-Z0-9_]+:\s*$\n\s{4,}path:' pubspec.yaml || grep -q " path:" pubspec.yaml; then
+            echo "can_publish=false" >> $GITHUB_OUTPUT
+            echo "Found path dependencies. Skipping publish."
+            exit 0
+          fi
+          echo "can_publish=true" >> $GITHUB_OUTPUT
+
       - name: Publish to pub.dev
-        if: ${{ secrets.PUB_CREDENTIALS_JSON }}
+        if: ${{ secrets.PUB_CREDENTIALS_JSON && steps.publish_check.outputs.can_publish == 'true' }}
         uses: k-paxian/dart-package-publisher@v1.6.6
         with:
           credentialJson: ${{ secrets.PUB_CREDENTIALS_JSON }}
@@ -65,9 +81,9 @@ jobs:
           skipTests: true
 
       - name: Skip publish (missing credentials)
-        if: ${{ !secrets.PUB_CREDENTIALS_JSON }}
+        if: ${{ !secrets.PUB_CREDENTIALS_JSON || steps.publish_check.outputs.can_publish != 'true' }}
         run: |
-          echo "PUB_CREDENTIALS_JSON secret not set. Skipping publish to pub.dev."
+          echo "Publishing skipped (missing credentials or ineligible pubspec)."
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

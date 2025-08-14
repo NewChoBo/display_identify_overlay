@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi‑monitor enumeration improvements on Windows
 - Example application enhancements
 
+## [0.1.1] - 2025-08-14
+
+### Changed
+
+- Clarified Windows-only support at the package level; kept Linux/macOS as planned
+- Cleaned up comments and logs; unified tests to be platform-agnostic
+- CI: added permissions/concurrency and example analyze; release test uses flutter test
+
+### Fixed
+
+- Resolved test failures on Linux/macOS runners by injecting a fake platform in unit tests
+
 ## [0.1.0] - 2025-08-14
 
  
