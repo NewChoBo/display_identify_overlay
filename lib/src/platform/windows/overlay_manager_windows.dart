@@ -65,6 +65,7 @@ class _WindowsOverlay {
       Pointer.fromFunction<win.WNDPROC>(_wndProc, 0);
 
   static const _className = 'DIO_OverlayWindowClass';
+  static bool _classRegistered = false;
 
   void initialize() {
     _registerWindowClass();
@@ -85,6 +86,7 @@ class _WindowsOverlay {
   }
 
   void _registerWindowClass() {
+  if (_classRegistered) return;
     final hInstance = win.GetModuleHandle(nullptr);
     final wc = calloc<win.WNDCLASSEX>();
 
@@ -111,6 +113,7 @@ class _WindowsOverlay {
     if (atom == 0) {
       // If class already exists, it's fine.
     }
+  _classRegistered = true;
   }
 
   void _createOverlayForMonitor(MonitorInfo m) {
@@ -147,8 +150,9 @@ class _WindowsOverlay {
     win.SetWindowLongPtr(hwnd, win.GWLP_USERDATA, m.index);
 
     // Semi-transparent whole window: use style background alpha if provided.
-  final bgAlpha = ((options.style.backgroundColor.a * 255.0).round()) & 0xFF; // 0-255
-  win.SetLayeredWindowAttributes(hwnd, 0, bgAlpha, win.LWA_ALPHA);
+    final bgAlpha =
+        ((options.style.backgroundColor.a * 255.0).round()) & 0xFF; // 0-255
+    win.SetLayeredWindowAttributes(hwnd, 0, bgAlpha, win.LWA_ALPHA);
 
     // Make it click-through and non-activating
     final exStyle = win.GetWindowLongPtr(hwnd, win.GWL_EXSTYLE);
@@ -178,8 +182,25 @@ class _WindowsOverlay {
       case win.WM_PAINT:
         _paint(hwnd);
         return 0;
+      case win.WM_ERASEBKGND:
+        // Avoid background erase to reduce flicker for layered window.
+        return 1;
       case win.WM_DESTROY:
-        // Cleanup mapping on destroy.
+        // Cleanup GDI resources and mapping on destroy.
+        final hFontProp = win.TEXT('DIO_HFONT');
+        final hBrushProp = win.TEXT('DIO_HBRUSH');
+        final hFont = win.GetProp(hwnd, hFontProp);
+        final hBrush = win.GetProp(hwnd, hBrushProp);
+        if (hFont != 0) {
+          win.RemoveProp(hwnd, hFontProp);
+          win.DeleteObject(hFont);
+        }
+        if (hBrush != 0) {
+          win.RemoveProp(hwnd, hBrushProp);
+          win.DeleteObject(hBrush);
+        }
+        calloc.free(hFontProp);
+        calloc.free(hBrushProp);
         _instances.remove(hwnd);
         return 0;
     }
@@ -196,16 +217,21 @@ class _WindowsOverlay {
       // Fill background (semi-transparent due to layered window alpha)
       final inst = _instances[hwnd];
       // Default to black if somehow not found.
-  final bg = inst?.options.style.backgroundColor;
+      final bg = inst?.options.style.backgroundColor;
       // Convert ARGB -> COLORREF (0x00BBGGRR)
-  final colorRef = (bg == null)
-      ? 0x000000
-      : (((bg.b * 255.0).round() & 0xFF) << 16) |
-        (((bg.g * 255.0).round() & 0xFF) << 8) |
-        ((bg.r * 255.0).round() & 0xFF);
-      final brush = win.CreateSolidBrush(colorRef);
-      win.FillRect(hdc, rect, brush);
-      win.DeleteObject(brush);
+      final colorRef = (bg == null)
+          ? 0x000000
+          : (((bg.b * 255.0).round() & 0xFF) << 16) |
+                (((bg.g * 255.0).round() & 0xFF) << 8) |
+                ((bg.r * 255.0).round() & 0xFF);
+      final hBrushProp = win.TEXT('DIO_HBRUSH');
+      var hBrush = win.GetProp(hwnd, hBrushProp);
+      if (hBrush == 0) {
+        hBrush = win.CreateSolidBrush(colorRef);
+        win.SetProp(hwnd, hBrushProp, hBrush);
+      }
+      win.FillRect(hdc, rect, hBrush);
+      calloc.free(hBrushProp);
 
       // Prepare text
       final index = win.GetWindowLongPtr(hwnd, win.GWLP_USERDATA);
@@ -220,6 +246,8 @@ class _WindowsOverlay {
           : height * 0.25;
       final fontSize = desired.clamp(24, 4000).toInt();
       // Try to create a font of the desired height/weight/family
+      final hFontProp = win.TEXT('DIO_HFONT');
+      var hFont = win.GetProp(hwnd, hFontProp);
       final lf = calloc<win.LOGFONT>();
       lf.ref.lfHeight = -fontSize; // negative -> character height
       // Map Flutter FontWeight (w100..w900) to GDI weight (100..900)
@@ -236,23 +264,26 @@ class _WindowsOverlay {
       lf.ref.lfWeight = weight;
       // Note: Setting lfFaceName via FFI is fragile across bindings.
       // We currently rely on the default font; consider adding safe face name support later.
-      final hFont = win.CreateFontIndirect(lf);
+      if (hFont == 0) {
+        hFont = win.CreateFontIndirect(lf);
+        win.SetProp(hwnd, hFontProp, hFont);
+      }
       final oldFont = win.SelectObject(hdc, hFont);
 
       win.SetBkMode(hdc, win.TRANSPARENT);
       // Text color (COLORREF)
-  final fg = style?.color;
-  final textColor = (fg == null)
-      ? 0x00FFFFFF
-      : (((fg.b * 255.0).round() & 0xFF) << 16) |
-        (((fg.g * 255.0).round() & 0xFF) << 8) |
-        ((fg.r * 255.0).round() & 0xFF);
+      final fg = style?.color;
+      final textColor = (fg == null)
+          ? 0x00FFFFFF
+          : (((fg.b * 255.0).round() & 0xFF) << 16) |
+                (((fg.g * 255.0).round() & 0xFF) << 8) |
+                ((fg.r * 255.0).round() & 0xFF);
       final shadowColor = style?.shadowColor;
-  final shadowColorRef = (shadowColor == null)
-      ? null
-      : (((shadowColor.b * 255.0).round() & 0xFF) << 16) |
-        (((shadowColor.g * 255.0).round() & 0xFF) << 8) |
-        ((shadowColor.r * 255.0).round() & 0xFF);
+      final shadowColorRef = (shadowColor == null)
+          ? null
+          : (((shadowColor.b * 255.0).round() & 0xFF) << 16) |
+                (((shadowColor.g * 255.0).round() & 0xFF) << 8) |
+                ((shadowColor.r * 255.0).round() & 0xFF);
       final padding = style?.padding;
       final padLeft = padding?.left.toInt() ?? 0;
       final padTop = padding?.top.toInt() ?? 0;
@@ -319,8 +350,8 @@ class _WindowsOverlay {
 
       // Cleanup
       win.SelectObject(hdc, oldFont);
-      win.DeleteObject(hFont);
-      calloc.free(lf);
+  calloc.free(lf);
+  calloc.free(hFontProp);
       calloc.free(text);
       calloc.free(rect);
       calloc.free(dtRect);
