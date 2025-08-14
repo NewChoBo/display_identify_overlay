@@ -1,7 +1,8 @@
 name: display_identify_overlay_windows
 version: 0.1.0
-publish_to: none
 description: Windows implementation of the display_identify_overlay federated plugin.
+homepage: https://github.com/NewChoBo/display_identify_overlay
+repository: https://github.com/NewChoBo/display_identify_overlay
 
 environment:
   sdk: ^3.8.1
@@ -19,8 +20,7 @@ dependencies:
     sdk: flutter
   ffi: ^2.1.2
   win32: ^5.4.0
-  display_identify_overlay_platform_interface:
-    path: ../display_identify_overlay_platform_interface
+  display_identify_overlay_platform_interface: ^0.1.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
