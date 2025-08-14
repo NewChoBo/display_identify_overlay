@@ -1,0 +1,24 @@
+name: display_identify_overlay_linux
+version: 0.1.0
+publish_to: none
+description: Linux implementation of the display_identify_overlay federated plugin.
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.16.0"
+
+flutter:
+  plugin:
+    implements: display_identify_overlay
+    platforms:
+      linux:
+        dartPluginClass: DisplayIdentifyOverlayLinux
+
+dependencies:
+  flutter:
+    sdk: flutter
+  display_identify_overlay_platform_interface:
+    path: ../display_identify_overlay_platform_interface
+
+dev_dependencies:
+  flutter_lints: ^5.0.0

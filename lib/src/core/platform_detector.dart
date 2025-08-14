@@ -5,7 +5,8 @@ class PlatformDetector {
   PlatformDetector._();
 
   /// Checks if the current platform is supported.
-  static bool get isSupported => Platform.isWindows; // Extend when ready
+  static bool get isSupported =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
   /// Gets the current platform name.
   static String get platform => Platform.isWindows

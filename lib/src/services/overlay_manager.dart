@@ -10,7 +10,6 @@ abstract class OverlayManager {
     if (PlatformDetector.isWindows) {
       return OverlayManagerWindows();
     }
-    // Graceful no-op manager for unsupported platforms
     return _NoopOverlayManager();
   }
 

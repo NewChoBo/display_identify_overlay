@@ -16,9 +16,8 @@ class DisplayIdentifyOverlayWindows
 
   _WindowsOverlay? _overlay;
   Timer? _autoHideTimer;
-  void _onAutoHide() {
-    // ignore: discarded_futures
-    hideAllOverlays();
+  void _onAutoHide() async {
+    await hideAllOverlays();
   }
 
   @override
@@ -212,11 +211,7 @@ class _WindowsOverlay {
     if (hwnd == 0) {
       calloc.free(className);
       calloc.free(windowName);
-      final err = win.GetLastError();
-      // ignore: avoid_print
-      print(
-        '[dio_windows] CreateWindowEx failed (${m.index}) GetLastError=$err',
-      );
+      //
       return;
     }
 

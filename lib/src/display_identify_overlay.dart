@@ -33,10 +33,6 @@ class DisplayIdentifyOverlay {
     try {
       // Prefer federated plugin path if registered
       if (_hasPlugin) {
-        // ignore: avoid_print
-        print(
-          '[dio] using plugin path; options=${options ?? const OverlayOptions()}',
-        );
         final piMonitors = await dio_pi.DisplayIdentifyOverlayPlatform.instance
             .getMonitors();
         if (piMonitors.isEmpty) {
@@ -55,10 +51,6 @@ class DisplayIdentifyOverlay {
       }
 
       // Fallback to legacy services
-      // ignore: avoid_print
-      print(
-        '[dio] using legacy path; options=${options ?? const OverlayOptions()}',
-      );
       final monitors = await _monitorDetector.getMonitors();
 
       if (monitors.isEmpty) {
