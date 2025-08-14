@@ -4,6 +4,8 @@ import 'package:display_identify_overlay/src/models/monitor_info.dart';
 import 'package:display_identify_overlay/src/models/overlay_options.dart';
 import 'package:display_identify_overlay/src/services/monitor_detector.dart';
 import 'package:display_identify_overlay/src/services/overlay_manager.dart';
+import 'package:display_identify_overlay_platform_interface/display_identify_overlay_platform_interface.dart'
+    as dio_pi;
 
 /// Main API class for displaying monitor identification overlays.
 ///
@@ -12,8 +14,12 @@ import 'package:display_identify_overlay/src/services/overlay_manager.dart';
 class DisplayIdentifyOverlay {
   DisplayIdentifyOverlay._();
 
-  static final MonitorDetector _monitorDetector = MonitorDetector();
+  static final MonitorDetector _monitorDetector = createMonitorDetector();
   static final OverlayManager _overlayManager = OverlayManager();
+
+  static bool get _hasPlugin =>
+      dio_pi.DisplayIdentifyOverlayPlatform.instance.platformName !=
+      'unsupported';
 
   /// Shows monitor identification numbers on all connected displays.
   ///
@@ -25,11 +31,34 @@ class DisplayIdentifyOverlay {
   /// - [OverlayCreationException] if overlay creation fails
   static Future<void> show([OverlayOptions? options]) async {
     try {
-      // If platform unsupported, do nothing to keep API safe on all targets
-      if (!PlatformDetector.isSupported) {
+      // Prefer federated plugin path if registered
+      if (_hasPlugin) {
+        // ignore: avoid_print
+        print(
+          '[dio] using plugin path; options=${options ?? const OverlayOptions()}',
+        );
+        final piMonitors = await dio_pi.DisplayIdentifyOverlayPlatform.instance
+            .getMonitors();
+        if (piMonitors.isEmpty) {
+          throw const NoMonitorsDetectedException();
+        }
+        final opt = options ?? const OverlayOptions();
+        final piOptions = dio_pi.PiOverlayOptions(
+          duration: opt.duration,
+          autoHide: opt.autoHide,
+        );
+        await dio_pi.DisplayIdentifyOverlayPlatform.instance.showOverlays(
+          piMonitors,
+          piOptions,
+        );
         return;
       }
-      // Detect monitors
+
+      // Fallback to legacy services
+      // ignore: avoid_print
+      print(
+        '[dio] using legacy path; options=${options ?? const OverlayOptions()}',
+      );
       final monitors = await _monitorDetector.getMonitors();
 
       if (monitors.isEmpty) {
@@ -51,8 +80,11 @@ class DisplayIdentifyOverlay {
 
   /// Hides all currently displayed overlays.
   static Future<void> hide() async {
-    if (!PlatformDetector.isSupported) return;
-    await _overlayManager.hideAllOverlays();
+    if (_hasPlugin) {
+      await dio_pi.DisplayIdentifyOverlayPlatform.instance.hideAllOverlays();
+    } else {
+      await _overlayManager.hideAllOverlays();
+    }
   }
 
   /// Gets information about all connected monitors.
@@ -61,10 +93,26 @@ class DisplayIdentifyOverlay {
   ///
   /// Throws:
   /// - [UnsupportedPlatformException] if the current platform is not supported
-  static Future<List<MonitorInfo>> getMonitors() async =>
-      PlatformDetector.isSupported
-      ? _monitorDetector.getMonitors()
-      : <MonitorInfo>[];
+  static Future<List<MonitorInfo>> getMonitors() async {
+    if (_hasPlugin) {
+      final list = await dio_pi.DisplayIdentifyOverlayPlatform.instance
+          .getMonitors();
+      return list
+          .map(
+            (m) => MonitorInfo(
+              index: m.index,
+              name: m.name,
+              x: m.x,
+              y: m.y,
+              width: m.width,
+              height: m.height,
+              isPrimary: m.isPrimary,
+            ),
+          )
+          .toList(growable: false);
+    }
+    return _monitorDetector.getMonitors();
+  }
 
   /// Checks if the current platform is supported.
   ///

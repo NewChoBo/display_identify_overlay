@@ -18,7 +18,7 @@ void main() {
     test('should throw exception on unsupported platform', () async {
       // This test verifies that the API structure is correct
       // Actual platform-specific behavior will be tested in integration tests
-      expect(() => DisplayIdentifyOverlay.show(), returnsNormally);
+      expect(DisplayIdentifyOverlay.show, returnsNormally);
     });
   });
 

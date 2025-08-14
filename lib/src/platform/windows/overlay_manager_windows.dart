@@ -4,14 +4,19 @@ import 'dart:ffi';
 import 'package:display_identify_overlay/src/models/monitor_info.dart';
 import 'package:display_identify_overlay/src/models/overlay_options.dart';
 import 'package:display_identify_overlay/src/services/overlay_manager.dart';
-import 'package:win32/win32.dart' as win;
 import 'package:ffi/ffi.dart';
+import 'package:win32/win32.dart' as win;
 
 /// Windows implementation of [OverlayManager].
 class OverlayManagerWindows implements OverlayManager {
   OverlayManagerWindows();
   _WindowsOverlay? _overlay;
   Timer? _autoHideTimer;
+
+  // Separate sync callback so Timer can use a tearoff and avoid lint.
+  void _onAutoHide() {
+    unawaited(hideAllOverlays());
+  }
 
   @override
   Future<void> showOverlays(
@@ -28,9 +33,7 @@ class OverlayManagerWindows implements OverlayManager {
     // Auto-hide if requested
     _autoHideTimer?.cancel();
     if (options.autoHide && options.duration != null) {
-      _autoHideTimer = Timer(options.duration!, () {
-        hideAllOverlays();
-      });
+      _autoHideTimer = Timer(options.duration!, _onAutoHide);
     }
   }
 
@@ -54,11 +57,15 @@ class _WindowsOverlay {
 
   final List<int> _hwnds = <int>[];
 
+  // Map hwnd -> instance, so the static wndproc can access options/state.
+  static final Map<int, _WindowsOverlay> _instances = <int, _WindowsOverlay>{};
+
   // Window class and proc
   late final Pointer<NativeFunction<win.WNDPROC>> _wndProcPtr =
       Pointer.fromFunction<win.WNDPROC>(_wndProc, 0);
 
   static const _className = 'DIO_OverlayWindowClass';
+  static bool _classRegistered = false;
 
   void initialize() {
     _registerWindowClass();
@@ -72,12 +79,14 @@ class _WindowsOverlay {
       // Destroy synchronously to ensure windows are removed immediately
       if (hwnd != 0) {
         win.DestroyWindow(hwnd);
+        _instances.remove(hwnd);
       }
     }
     _hwnds.clear();
   }
 
   void _registerWindowClass() {
+    if (_classRegistered) return;
     final hInstance = win.GetModuleHandle(nullptr);
     final wc = calloc<win.WNDCLASSEX>();
 
@@ -85,7 +94,8 @@ class _WindowsOverlay {
     wc.ref.style = win.CS_HREDRAW | win.CS_VREDRAW;
     wc.ref.lpfnWndProc = _wndProcPtr;
     wc.ref.cbClsExtra = 0;
-    wc.ref.cbWndExtra = sizeOf<IntPtr>(); // store index in GWLP_USERDATA
+    // We don't use extra bytes; monitor index is stored via GWLP_USERDATA.
+    wc.ref.cbWndExtra = 0;
     wc.ref.hInstance = hInstance;
     wc.ref.hIcon = win.LoadIcon(hInstance, win.IDI_APPLICATION);
     wc.ref.hCursor = win.LoadCursor(0, win.IDC_ARROW);
@@ -103,6 +113,7 @@ class _WindowsOverlay {
     if (atom == 0) {
       // If class already exists, it's fine.
     }
+    _classRegistered = true;
   }
 
   void _createOverlayForMonitor(MonitorInfo m) {
@@ -138,9 +149,10 @@ class _WindowsOverlay {
     // Store monitor index in window user data
     win.SetWindowLongPtr(hwnd, win.GWLP_USERDATA, m.index);
 
-    // Semi-transparent whole window
-    const opacity = 180; // 0-255
-    win.SetLayeredWindowAttributes(hwnd, 0, opacity, win.LWA_ALPHA);
+    // Semi-transparent whole window: use style background alpha if provided.
+    final bgAlpha =
+        ((options.style.backgroundColor.a * 255.0).round()) & 0xFF; // 0-255
+    win.SetLayeredWindowAttributes(hwnd, 0, bgAlpha, win.LWA_ALPHA);
 
     // Make it click-through and non-activating
     final exStyle = win.GetWindowLongPtr(hwnd, win.GWL_EXSTYLE);
@@ -161,6 +173,7 @@ class _WindowsOverlay {
     calloc.free(className);
     calloc.free(windowName);
     _hwnds.add(hwnd);
+    _instances[hwnd] = this;
   }
 
   // Window procedure: paint a big centered number
@@ -169,17 +182,26 @@ class _WindowsOverlay {
       case win.WM_PAINT:
         _paint(hwnd);
         return 0;
-      case win.WM_KEYDOWN:
-      case win.WM_LBUTTONDOWN:
-      case win.WM_RBUTTONDOWN:
-      case win.WM_MBUTTONDOWN:
-        // Close on any input
-        win.PostMessage(hwnd, win.WM_CLOSE, 0, 0);
-        return 0;
-      case win.WM_CLOSE:
-        win.DestroyWindow(hwnd);
-        return 0;
+      case win.WM_ERASEBKGND:
+        // Avoid background erase to reduce flicker for layered window.
+        return 1;
       case win.WM_DESTROY:
+        // Cleanup GDI resources and mapping on destroy.
+        final hFontProp = win.TEXT('DIO_HFONT');
+        final hBrushProp = win.TEXT('DIO_HBRUSH');
+        final hFont = win.GetProp(hwnd, hFontProp);
+        final hBrush = win.GetProp(hwnd, hBrushProp);
+        if (hFont != 0) {
+          win.RemoveProp(hwnd, hFontProp);
+          win.DeleteObject(hFont);
+        }
+        if (hBrush != 0) {
+          win.RemoveProp(hwnd, hBrushProp);
+          win.DeleteObject(hBrush);
+        }
+        calloc.free(hFontProp);
+        calloc.free(hBrushProp);
+        _instances.remove(hwnd);
         return 0;
     }
     return win.DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -193,9 +215,23 @@ class _WindowsOverlay {
       win.GetClientRect(hwnd, rect);
 
       // Fill background (semi-transparent due to layered window alpha)
-      final brush = win.CreateSolidBrush(0x000000); // black
-      win.FillRect(hdc, rect, brush);
-      win.DeleteObject(brush);
+      final inst = _instances[hwnd];
+      // Default to black if somehow not found.
+      final bg = inst?.options.style.backgroundColor;
+      // Convert ARGB -> COLORREF (0x00BBGGRR)
+      final colorRef = (bg == null)
+          ? 0x000000
+          : (((bg.b * 255.0).round() & 0xFF) << 16) |
+                (((bg.g * 255.0).round() & 0xFF) << 8) |
+                ((bg.r * 255.0).round() & 0xFF);
+      final hBrushProp = win.TEXT('DIO_HBRUSH');
+      var hBrush = win.GetProp(hwnd, hBrushProp);
+      if (hBrush == 0) {
+        hBrush = win.CreateSolidBrush(colorRef);
+        win.SetProp(hwnd, hBrushProp, hBrush);
+      }
+      win.FillRect(hdc, rect, hBrush);
+      calloc.free(hBrushProp);
 
       // Prepare text
       final index = win.GetWindowLongPtr(hwnd, win.GWLP_USERDATA);
@@ -203,35 +239,119 @@ class _WindowsOverlay {
 
       // Font size relative to window height
       final height = rect.ref.bottom - rect.ref.top;
-      final fontSize = (height * 0.25).clamp(24, 4000).toInt();
-      // Try to create a bold font of the desired height
+      // If a custom font size is set (> 0), honor it; otherwise scale to monitor.
+      final style = inst?.options.style;
+      final desired = (style != null && style.fontSize > 0)
+          ? style.fontSize
+          : height * 0.25;
+      final fontSize = desired.clamp(24, 4000).toInt();
+      // Try to create a font of the desired height/weight/family
+      final hFontProp = win.TEXT('DIO_HFONT');
+      var hFont = win.GetProp(hwnd, hFontProp);
       final lf = calloc<win.LOGFONT>();
       lf.ref.lfHeight = -fontSize; // negative -> character height
-      lf.ref.lfWeight = 700; // FW_BOLD
-      final hFont = win.CreateFontIndirect(lf);
+      // Map Flutter FontWeight (w100..w900) to GDI weight (100..900)
+      final weight = () {
+        if (style == null) return 700; // default bold
+        // FontWeight exposes index 0..8 (w100..w900). Multiply by 100.
+        try {
+          final dynamic fw = style.fontWeight;
+          final idx = fw.index as int?; // ignore if not available
+          if (idx != null) return ((idx + 1) * 100).clamp(100, 900);
+        } catch (_) {}
+        return 700;
+      }();
+      lf.ref.lfWeight = weight;
+      // Note: Setting lfFaceName via FFI is fragile across bindings.
+      // We currently rely on the default font; consider adding safe face name support later.
+      if (hFont == 0) {
+        hFont = win.CreateFontIndirect(lf);
+        win.SetProp(hwnd, hFontProp, hFont);
+      }
       final oldFont = win.SelectObject(hdc, hFont);
 
       win.SetBkMode(hdc, win.TRANSPARENT);
-      win.SetTextColor(hdc, 0x00FFFFFF); // white
+      // Text color (COLORREF)
+      final fg = style?.color;
+      final textColor = (fg == null)
+          ? 0x00FFFFFF
+          : (((fg.b * 255.0).round() & 0xFF) << 16) |
+                (((fg.g * 255.0).round() & 0xFF) << 8) |
+                ((fg.r * 255.0).round() & 0xFF);
+      final shadowColor = style?.shadowColor;
+      final shadowColorRef = (shadowColor == null)
+          ? null
+          : (((shadowColor.b * 255.0).round() & 0xFF) << 16) |
+                (((shadowColor.g * 255.0).round() & 0xFF) << 8) |
+                ((shadowColor.r * 255.0).round() & 0xFF);
+      final padding = style?.padding;
+      final padLeft = padding?.left.toInt() ?? 0;
+      final padTop = padding?.top.toInt() ?? 0;
+      final padRight = padding?.right.toInt() ?? 0;
+      final padBottom = padding?.bottom.toInt() ?? 0;
 
       final dtRect = calloc<win.RECT>();
-      dtRect.ref.left = rect.ref.left;
-      dtRect.ref.top = rect.ref.top;
-      dtRect.ref.right = rect.ref.right;
-      dtRect.ref.bottom = rect.ref.bottom;
+      // Start with full rect, then apply padding and alignment.
+      dtRect.ref.left = rect.ref.left + padLeft;
+      dtRect.ref.top = rect.ref.top + padTop;
+      dtRect.ref.right = rect.ref.right - padRight;
+      dtRect.ref.bottom = rect.ref.bottom - padBottom;
 
-      win.DrawText(
-        hdc,
-        text,
-        -1,
-        dtRect,
-        win.DT_CENTER | win.DT_VCENTER | win.DT_SINGLELINE,
-      );
+      // Alignment flags
+      int flags = win.DT_SINGLELINE;
+      final pos = inst?.options.position;
+      switch (pos) {
+        case OverlayPosition.topLeft:
+          flags |= win.DT_LEFT | win.DT_TOP;
+          break;
+        case OverlayPosition.topRight:
+          flags |= win.DT_RIGHT | win.DT_TOP;
+          break;
+        case OverlayPosition.bottomLeft:
+          flags |= win.DT_LEFT | win.DT_BOTTOM;
+          break;
+        case OverlayPosition.bottomRight:
+          flags |= win.DT_RIGHT | win.DT_BOTTOM;
+          break;
+        case OverlayPosition.topCenter:
+          flags |= win.DT_CENTER | win.DT_TOP;
+          break;
+        case OverlayPosition.bottomCenter:
+          flags |= win.DT_CENTER | win.DT_BOTTOM;
+          break;
+        case OverlayPosition.leftCenter:
+          flags |= win.DT_LEFT | win.DT_VCENTER;
+          break;
+        case OverlayPosition.rightCenter:
+          flags |= win.DT_RIGHT | win.DT_VCENTER;
+          break;
+        case OverlayPosition.center:
+        default:
+          flags |= win.DT_CENTER | win.DT_VCENTER;
+          break;
+      }
+
+      // Optional shadow: draw offset text first
+      if (shadowColorRef != null && style != null) {
+        final shadowOffset = style.shadowOffset;
+        final shadowRect = calloc<win.RECT>();
+        shadowRect.ref.left = dtRect.ref.left + shadowOffset.dx.toInt();
+        shadowRect.ref.top = dtRect.ref.top + shadowOffset.dy.toInt();
+        shadowRect.ref.right = dtRect.ref.right + shadowOffset.dx.toInt();
+        shadowRect.ref.bottom = dtRect.ref.bottom + shadowOffset.dy.toInt();
+        win.SetTextColor(hdc, shadowColorRef);
+        win.DrawText(hdc, text, -1, shadowRect, flags);
+        calloc.free(shadowRect);
+      }
+
+      // Draw main text
+      win.SetTextColor(hdc, textColor);
+      win.DrawText(hdc, text, -1, dtRect, flags);
 
       // Cleanup
       win.SelectObject(hdc, oldFont);
-      win.DeleteObject(hFont);
       calloc.free(lf);
+      calloc.free(hFontProp);
       calloc.free(text);
       calloc.free(rect);
       calloc.free(dtRect);

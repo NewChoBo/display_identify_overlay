@@ -26,5 +26,5 @@ class UnsupportedPlatformException extends DisplayIdentifyException {
 /// Exception thrown when overlay creation fails.
 class OverlayCreationException extends DisplayIdentifyException {
   /// Creates an [OverlayCreationException] with the given [message].
-  const OverlayCreationException(String message) : super(message);
+  const OverlayCreationException(super.message);
 }
