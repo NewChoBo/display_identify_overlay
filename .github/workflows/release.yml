@@ -16,6 +16,8 @@ jobs:
   release:
     name: Publish and create GitHub Release
     runs-on: ubuntu-latest
+    env:
+      HAS_PUB_CREDENTIALS: ${{ secrets.PUB_CREDENTIALS_JSON != '' }}
 
     steps:
       - name: Checkout
@@ -73,7 +75,7 @@ jobs:
           echo "can_publish=true" >> $GITHUB_OUTPUT
 
       - name: Publish to pub.dev
-        if: ${{ secrets.PUB_CREDENTIALS_JSON && steps.publish_check.outputs.can_publish == 'true' }}
+        if: ${{ steps.publish_check.outputs.can_publish == 'true' && env.HAS_PUB_CREDENTIALS == 'true' }}
         uses: k-paxian/dart-package-publisher@v1.6.6
         with:
           credentialJson: ${{ secrets.PUB_CREDENTIALS_JSON }}
@@ -81,7 +83,7 @@ jobs:
           skipTests: true
 
       - name: Skip publish (missing credentials)
-        if: ${{ !secrets.PUB_CREDENTIALS_JSON || steps.publish_check.outputs.can_publish != 'true' }}
+        if: ${{ steps.publish_check.outputs.can_publish != 'true' || env.HAS_PUB_CREDENTIALS != 'true' }}
         run: |
           echo "Publishing skipped (missing credentials or ineligible pubspec)."
 
