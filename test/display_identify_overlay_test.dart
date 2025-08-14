@@ -1,4 +1,6 @@
 import 'package:display_identify_overlay/display_identify_overlay.dart';
+import 'package:display_identify_overlay_platform_interface/display_identify_overlay_platform_interface.dart'
+    as pi;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,9 +17,9 @@ void main() {
       expect(['Windows', 'Linux', 'macOS', 'Unknown'], contains(platform));
     });
 
-    test('should throw exception on unsupported platform', () async {
-      // This test verifies that the API structure is correct
-      // Actual platform-specific behavior will be tested in integration tests
+    test('should call show without throwing (platform-agnostic)', () async {
+      // Inject a fake platform so the test doesn't depend on host OS behavior
+      pi.DisplayIdentifyOverlayPlatform.instance = _FakePlatform();
       expect(DisplayIdentifyOverlay.show, returnsNormally);
     });
   });
@@ -156,4 +158,31 @@ void main() {
       expect(exception.message, equals('Failed to create overlay'));
     });
   });
+}
+
+class _FakePlatform implements pi.DisplayIdentifyOverlayPlatform {
+  @override
+  String get platformName => 'test';
+
+  @override
+  Future<List<pi.PiMonitorInfo>> getMonitors() async => const [
+    pi.PiMonitorInfo(
+      index: 0,
+      name: 'Test Monitor',
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      isPrimary: true,
+    ),
+  ];
+
+  @override
+  Future<void> hideAllOverlays() async {}
+
+  @override
+  Future<void> showOverlays(
+    List<pi.PiMonitorInfo> monitors,
+    pi.PiOverlayOptions options,
+  ) async {}
 }
