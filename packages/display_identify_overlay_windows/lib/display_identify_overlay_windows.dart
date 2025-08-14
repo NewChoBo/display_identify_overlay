@@ -212,15 +212,38 @@ class _WindowsOverlay {
     if (hwnd == 0) {
       calloc.free(className);
       calloc.free(windowName);
+      final err = win.GetLastError();
+      // ignore: avoid_print
+      print(
+        '[dio_windows] CreateWindowEx failed (${m.index}) GetLastError=$err',
+      );
       return;
     }
 
     win.SetWindowLongPtr(hwnd, win.GWLP_USERDATA, m.index);
 
-    const opacity = 180;
+    const opacity = 200;
     win.SetLayeredWindowAttributes(hwnd, 0, opacity, win.LWA_ALPHA);
 
     win.ShowWindow(hwnd, win.SW_SHOWNOACTIVATE);
+    // Ensure z-order and visibility
+    win.SetWindowPos(
+      hwnd,
+      win.HWND_TOPMOST,
+      0,
+      0,
+      0,
+      0,
+      win.SWP_NOMOVE | win.SWP_NOSIZE | win.SWP_NOACTIVATE | win.SWP_SHOWWINDOW,
+    );
+    // Force immediate paint
+    win.UpdateWindow(hwnd);
+    win.RedrawWindow(
+      hwnd,
+      nullptr,
+      0,
+      win.RDW_INVALIDATE | win.RDW_UPDATENOW | win.RDW_ERASE,
+    );
 
     calloc.free(className);
     calloc.free(windowName);
