@@ -3,7 +3,6 @@ description: >
   A Flutter package that displays monitor index numbers as overlays on all
   connected displays. Perfect for identifying monitors in multi-display setups.
 version: 0.1.1
-publish_to: none
 homepage: https://github.com/NewChoBo/display_identify_overlay
 repository: https://github.com/NewChoBo/display_identify_overlay
 issue_tracker: https://github.com/NewChoBo/display_identify_overlay/issues
@@ -36,10 +35,8 @@ dependencies:
     sdk: flutter
   ffi: ^2.1.2
   win32: ^5.4.0
-  display_identify_overlay_platform_interface:
-    path: packages/display_identify_overlay_platform_interface
-  display_identify_overlay_windows:
-    path: packages/display_identify_overlay_windows
+  display_identify_overlay_platform_interface: ^0.1.0
+  display_identify_overlay_windows: ^0.1.0
 
 dev_dependencies:
   flutter_test:
